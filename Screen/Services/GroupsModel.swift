@@ -6,7 +6,7 @@ final class GroupsModel: ObservableObject {
     enum Outcome { case applied, sentForApproval }
 
     @Published private(set) var groups: [LimitGroup] = []
-    @Published private(set) var pending: [String: PendingEdit] = [:]
+    @Published private(set) var pendingGroupIDs: Set<UUID> = []
     @Published private(set) var partnerGroups: [GroupRow] = []
 
     let enforcer = Enforcer()
@@ -14,7 +14,7 @@ final class GroupsModel: ObservableObject {
 
     func reload() {
         groups = enforcer.groups
-        pending = PendingEdits().all()
+        pendingGroupIDs = Set(PendingEdits().all().values.map(\.group.id))
     }
 
     func loadRemote(partnerID: UUID?) async {
@@ -28,8 +28,8 @@ final class GroupsModel: ObservableObject {
         let removesApps = old.map { LimitChange.removesApps(from: $0.config, to: edited.config) } ?? false
 
         if verdict == .loosening && paired {
-            PendingEdits().set(PendingEdit(group: edited, delete: false))
             let id = try await backend.requestLoosen(groupID: edited.id, payload: LoosenPayload(edited), message: nil)
+            PendingEdits().set(PendingEdit(group: edited, delete: false), requestID: id)
             await backend.notify(requestID: id)
             reload()
             return .sentForApproval
@@ -47,8 +47,8 @@ final class GroupsModel: ObservableObject {
 
     func delete(_ group: LimitGroup, paired: Bool) async throws -> Outcome {
         if paired {
-            PendingEdits().set(PendingEdit(group: group, delete: true))
             let id = try await backend.requestLoosen(groupID: group.id, payload: LoosenPayload(group, delete: true), message: nil)
+            PendingEdits().set(PendingEdit(group: group, delete: true), requestID: id)
             await backend.notify(requestID: id)
             reload()
             return .sentForApproval
@@ -57,5 +57,15 @@ final class GroupsModel: ObservableObject {
         reload()
         try? await backend.deleteGroup(group.id)
         return .applied
+    }
+
+    /// True when `draft` shares an app, category or website with another group.
+    func overlaps(_ draft: LimitGroup) -> Bool {
+        groups.contains { group in
+            guard group.id != draft.id else { return false }
+            return !group.selection.applicationTokens.isDisjoint(with: draft.selection.applicationTokens)
+                || !group.selection.categoryTokens.isDisjoint(with: draft.selection.categoryTokens)
+                || !group.selection.webDomainTokens.isDisjoint(with: draft.selection.webDomainTokens)
+        }
     }
 }

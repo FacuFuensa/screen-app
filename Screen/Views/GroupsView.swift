@@ -17,7 +17,7 @@ struct GroupsView: View {
                             Text(g.name).font(.headline)
                             Text(summary(dailyMinutes: g.dailyMinutes, window: g.window, apps: g.appCount))
                                 .font(.subheadline).foregroundStyle(.secondary)
-                            if model.pending[g.id.uuidString] != nil {
+                            if model.pendingGroupIDs.contains(g.id) {
                                 Label("Cambio esperando aprobación", systemImage: "clock").font(.caption).foregroundStyle(.orange)
                             }
                         }

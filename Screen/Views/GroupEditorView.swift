@@ -29,6 +29,9 @@ struct GroupEditorView: View {
             Section("Nombre") { TextField("Redes", text: $draft.name) }
             Section("Apps") {
                 Button { pickerShown = true } label: { LabeledContent("Elegir apps", value: "\(draft.appCount)") }
+                if model.overlaps(draft) {
+                    Text("Alguna de estas apps ya está en otro grupo.").font(.footnote).foregroundStyle(.red)
+                }
             }
             Section("Minutos por día") {
                 Toggle("Límite diario", isOn: $hasDaily)
@@ -85,6 +88,7 @@ struct GroupEditorView: View {
             && draft.appCount > 0
             && (draft.dailyMinutes != nil || draft.window != nil)
             && (draft.window?.isValid ?? true)
+            && !model.overlaps(draft)
     }
 
     private func save() async {

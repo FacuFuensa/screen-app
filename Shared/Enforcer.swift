@@ -77,6 +77,16 @@ final class Enforcer {
     /// Stores `new` and restarts monitoring for the groups that changed.
     func install(groups new: [LimitGroup], now: Date = .now) throws {
         let old = groups
+        do {
+            try apply(new, replacing: old, now: now)
+        } catch {
+            // Put back the previous limits so a failed edit never leaves apps unmonitored.
+            try? apply(old, replacing: new, now: now)
+            throw error
+        }
+    }
+
+    private func apply(_ new: [LimitGroup], replacing old: [LimitGroup], now: Date) throws {
         store.save(new, key: SharedKey.groups)
         for g in old where !new.contains(where: { $0.id == g.id }) {
             center.stopMonitoring(activities(for: g.id, includingExtra: true))
@@ -124,11 +134,10 @@ final class Enforcer {
 
     /// 5 minutes once a day, no approval. The partner hears about it through the outbox.
     func useWildcard(groupID: UUID, now: Date = .now) throws -> Bool {
-        guard ledger(now: now).canUseWildcard else { return false }
-        guard try grantCredit(groupID: groupID, minutes: UsageRules.wildcardMinutes, requestID: nil, now: now) else { return false }
         var l = ledger(now: now)
-        l.consumeWildcard()
+        guard l.consumeWildcard() else { return false }
         save(l)
+        guard try grantCredit(groupID: groupID, minutes: UsageRules.wildcardMinutes, requestID: nil, now: now) else { return false }
         Outbox(store: store).enqueue(kind: "wildcard_used", groupID: groupID, now: now)
         return true
     }

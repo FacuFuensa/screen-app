@@ -32,6 +32,7 @@ final class SyncService {
         }
         await flushOutbox()
         await applyGrants()
+        await dropAnsweredEdits()
         // Re-mirror local groups; the server rejects anything looser, which is fine.
         for g in enforcer.groups { _ = try? await backend.saveGroup(g, removesApps: false) }
     }
@@ -54,43 +55,64 @@ final class SyncService {
         guard let grants = try? await backend.myUnappliedGrants() else { return }
         let today = DayKey.string(for: .now)
         for r in grants {
-            switch r.kind {
-            case .extraTime:
-                // Yesterday's minutes are gone; just acknowledge them.
-                if let answered = r.answeredAt, DayKey.string(for: answered) == today,
-                   let gid = r.groupID, let minutes = r.grantedMinutes {
-                    _ = try? enforcer.grantCredit(groupID: gid, minutes: minutes, requestID: r.id.uuidString)
+            do {
+                switch r.kind {
+                case .extraTime:
+                    // Yesterday's minutes are gone; just acknowledge them.
+                    if let answered = r.answeredAt, DayKey.string(for: answered) == today,
+                       let gid = r.groupID, let minutes = r.grantedMinutes {
+                        _ = try enforcer.grantCredit(groupID: gid, minutes: minutes, requestID: r.id.uuidString)
+                    }
+                case .loosenLimit:
+                    try applyApprovedEdit(request: r)
                 }
-            case .loosenLimit:
-                if let gid = r.groupID ?? pendingGroupID(for: r) { applyApprovedEdit(groupID: gid, request: r) }
+            } catch {
+                continue  // Keep it unapplied so the next sync retries.
             }
             try? await backend.markApplied(r.id)
         }
     }
 
-    /// A deleted group comes back with group_id null; find it among the pending edits.
-    private func pendingGroupID(for r: RequestRow) -> UUID? {
-        guard r.payload?.delete == true else { return nil }
-        return PendingEdits().all().values.first(where: { $0.delete })?.group.id
-    }
-
-    private func applyApprovedEdit(groupID: UUID, request r: RequestRow) {
-        var groups = enforcer.groups
-        if let edit = PendingEdits().take(groupID: groupID) {
-            if edit.delete {
-                groups.removeAll { $0.id == groupID }
-            } else if let i = groups.firstIndex(where: { $0.id == groupID }) {
-                groups[i] = edit.group
-            }
-        } else if let p = r.payload, let i = groups.firstIndex(where: { $0.id == groupID }) {
-            // App reinstalled: no local edit, so apply the numbers and keep the apps.
-            if p.delete == true {
-                groups.remove(at: i)
-            } else {
-                groups[i].dailyMinutes = p.dailyMinutes
-                groups[i].window = p.windowStart.flatMap { s in p.windowEnd.map { BlockWindow(startMinute: s, endMinute: $0) } }
+    private func dropAnsweredEdits() async {
+        guard let me = await backend.currentUserID(), let requests = try? await backend.requests() else { return }
+        for r in requests where r.fromUser == me {
+            guard case .loosenLimit = r.kind else { continue }
+            switch r.effectiveStatus() {
+            case .denied, .superseded, .expired:
+                _ = PendingEdits().take(requestID: r.id)
+            case .pending, .granted:
+                break
             }
         }
-        try? enforcer.install(groups: groups)
+    }
+
+    private func applyApprovedEdit(request r: RequestRow) throws {
+        var groups = enforcer.groups
+        let pending = PendingEdits()
+        if let edit = pending.take(requestID: r.id) {
+            if edit.delete {
+                groups.removeAll { $0.id == edit.group.id }
+            } else if let i = groups.firstIndex(where: { $0.id == edit.group.id }) {
+                groups[i] = edit.group
+            }
+            do {
+                try enforcer.install(groups: groups)
+            } catch {
+                pending.set(edit, requestID: r.id)
+                throw error
+            }
+            return
+        }
+
+        guard let groupID = r.groupID, let p = r.payload,
+              let i = groups.firstIndex(where: { $0.id == groupID }) else { return }
+        // App reinstalled: no local edit, so apply the numbers and keep the apps.
+        if p.delete == true {
+            groups.remove(at: i)
+        } else {
+            groups[i].dailyMinutes = p.dailyMinutes
+            groups[i].window = p.windowStart.flatMap { s in p.windowEnd.map { BlockWindow(startMinute: s, endMinute: $0) } }
+        }
+        try enforcer.install(groups: groups)
     }
 }

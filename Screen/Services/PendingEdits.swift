@@ -12,16 +12,21 @@ struct PendingEdits {
 
     func all() -> [String: PendingEdit] { store.load([String: PendingEdit].self, key: SharedKey.pendingEdits) ?? [:] }
 
-    func set(_ edit: PendingEdit) {
+    func set(_ edit: PendingEdit, requestID: UUID) {
         var map = all()
-        map[edit.group.id.uuidString] = edit
+        map = map.filter { $0.value.group.id != edit.group.id }
+        map[requestID.uuidString] = edit
         store.save(map, key: SharedKey.pendingEdits)
     }
 
-    func take(groupID: UUID) -> PendingEdit? {
+    func take(requestID: UUID) -> PendingEdit? {
         var map = all()
-        let edit = map.removeValue(forKey: groupID.uuidString)
+        let edit = map.removeValue(forKey: requestID.uuidString)
         store.save(map, key: SharedKey.pendingEdits)
         return edit
+    }
+
+    func hasPending(groupID: UUID) -> Bool {
+        all().values.contains { $0.group.id == groupID }
     }
 }

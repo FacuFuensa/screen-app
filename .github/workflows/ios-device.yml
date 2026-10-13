@@ -1,0 +1,91 @@
+name: Device build (development)
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "HTTPS base URL where ota/ will be served (e.g. https://screen-ota.vercel.app)"
+        required: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=0
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Missing secret $v"; missing=1; fi
+          done
+          exit $missing
+      - run: brew install xcodegen && xcodegen generate
+      - name: Write API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: mkdir -p private && printf '%s\n' "$ASC_KEY_P8" > private/AuthKey.p8
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -o pipefail
+          # xcodebuild echoes its argv; redact before anything reaches a file.
+          redact () { sed -e "s|$SUPABASE_ANON_KEY|<redacted>|g"; }
+          xcodebuild archive -project Screen.xcodeproj -scheme Screen -configuration Debug \
+            -destination 'generic/platform=iOS' -archivePath build/Screen.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/private/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            SUPABASE_URL="$SUPABASE_URL" SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            2>&1 | redact | tee archive.log | tail -n 100
+      - name: Export
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive -archivePath build/Screen.xcarchive \
+            -exportOptionsPlist ci/exportOptions-debugging.plist -exportPath build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/private/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee export.log | tail -n 60
+      - name: Build OTA folder
+        run: |
+          BASE="${{ inputs.base_url }}"
+          mkdir -p ota
+          cp build/export/Screen.ipa ota/Screen.ipa
+          cat > ota/manifest.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>items</key><array><dict>
+            <key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>$BASE/Screen.ipa</string></dict></array>
+            <key>metadata</key><dict><key>bundle-identifier</key><string>com.facufuensa.screen</string><key>bundle-version</key><string>${{ github.run_number }}</string><key>kind</key><string>software</string><key>title</key><string>Screen</string></dict>
+          </dict></array></dict></plist>
+          EOF
+          cat > ota/index.html <<EOF
+          <!doctype html><meta name="viewport" content="width=device-width">
+          <a style="font:600 22px -apple-system;display:block;margin:40px 16px" href="itms-services://?action=download-manifest&url=$BASE/manifest.plist">Instalar Screen (build ${{ github.run_number }})</a>
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ota
+          path: ota/
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-logs
+          path: |
+            archive.log
+            export.log
+          if-no-files-found: ignore

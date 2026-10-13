@@ -1,0 +1,28 @@
+name: iOS build
+on:
+  push:
+    branches: [main]
+    paths: ["Screen/**", "Shared/**", "Extensions/**", "Packages/**", "project.yml", ".github/workflows/ios-build.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build for simulator (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project Screen.xcodeproj -scheme Screen -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee xcodebuild.log | tail -n 80
+      - name: Show compile errors
+        if: failure()
+        run: grep -E ' error:' xcodebuild.log | head -n 60 || true
+      - name: Verify the three extensions are embedded
+        run: |
+          APP=build/Build/Products/Debug-iphonesimulator/Screen.app
+          ls "$APP/PlugIns"
+          test "$(ls "$APP/PlugIns" | grep -c '\.appex$')" -eq 3

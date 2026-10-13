@@ -31,3 +31,7 @@ jobs:
             test -f "$b/PrivacyInfo.xcprivacy" || { echo "::error::PrivacyInfo.xcprivacy missing in $b"; exit 1; }
           done
           echo "Privacy manifest packaged in app and extensions."
+          # iPhone-only: an iPad-capable bundle is rejected at upload for portrait-only orientation.
+          family=$(plutil -extract UIDeviceFamily json -o - "$APP/Info.plist")
+          test "$family" = "[1]" || { echo "::error::UIDeviceFamily is $family, expected [1]"; exit 1; }
+          echo "iPhone-only bundle."

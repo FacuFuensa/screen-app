@@ -15,7 +15,8 @@ struct TourFinalView: View {
         }
         .padding(24)
         .background(Theme.background)
-        .presentationDetents([.medium, .large])
+        // Full height: at .medium the three rows were cut to one line each.
+        .presentationDetents([.large])
     }
 
     private func row(_ symbol: String, _ text: String) -> some View {
@@ -24,7 +25,10 @@ struct TourFinalView: View {
                 .foregroundStyle(.white)
                 .frame(width: 36, height: 36)
                 .background(Theme.coral, in: Circle())
-            Text(text).font(.body)
+            Text(text)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

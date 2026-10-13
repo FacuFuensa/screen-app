@@ -52,6 +52,14 @@ struct RootView: View {
         switch Demo.shot {
         case "dupla", "dupla-sin-pareja": router.tab = .partner
         case "ask": router.sheet = .ask(nil)
+        case "editor-endurecer":
+            var draft = Demo.myGroups[0]; draft.dailyMinutes = 30
+            router.demoEditor = DemoEditorRequest(original: Demo.myGroups[0], draft: draft)
+        case "editor-aflojar":
+            var draft = Demo.myGroups[0]; draft.dailyMinutes = 75
+            router.demoEditor = DemoEditorRequest(original: Demo.myGroups[0], draft: draft)
+        case "editor-pendiente":
+            router.demoEditor = DemoEditorRequest(original: Demo.myGroups[1], draft: Demo.myGroups[1])
         default: router.tab = .me
         }
     }

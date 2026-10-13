@@ -137,13 +137,14 @@ struct RequestsView: View {
         case .denied: return "Rechazado"
         case .superseded: return "Reemplazado por otro pedido"
         case .expired: return "Venció sin respuesta"
+        case .cancelled: return "Cancelado"
         }
     }
 
     private func statusAppearance(_ request: RequestRow) -> (symbol: String, color: Color) {
         switch request.effectiveStatus() {
         case .granted: return ("checkmark.circle.fill", .green)
-        case .denied, .superseded, .expired: return ("xmark.circle.fill", .gray)
+        case .denied, .superseded, .expired, .cancelled: return ("xmark.circle.fill", .gray)
         case .pending: return ("clock.fill", Theme.amber)
         }
     }

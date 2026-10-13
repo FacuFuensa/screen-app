@@ -14,6 +14,14 @@ public enum Formatting {
     public static func window(_ w: BlockWindow) -> String {
         "\(clock(w.startMinute))–\(clock(w.endMinute))"
     }
+
+    /// "45 min por día", "bloqueo 23:00–07:00", both joined with " y ", or "sin límite".
+    public static func limitSummary(dailyMinutes: Int?, window: BlockWindow?) -> String {
+        var parts: [String] = []
+        if let dailyMinutes { parts.append("\(minutes(dailyMinutes)) por día") }
+        if let window { parts.append("bloqueo \(Self.window(window))") }
+        return parts.isEmpty ? "sin límite" : parts.joined(separator: " y ")
+    }
 }
 
 public enum FeedWording {

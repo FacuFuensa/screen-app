@@ -78,7 +78,7 @@ final class SyncService {
         for r in requests where r.fromUser == me {
             guard case .loosenLimit = r.kind else { continue }
             switch r.effectiveStatus() {
-            case .denied, .superseded, .expired:
+            case .denied, .superseded, .expired, .cancelled:
                 _ = PendingEdits().take(requestID: r.id)
             case .pending, .granted:
                 break

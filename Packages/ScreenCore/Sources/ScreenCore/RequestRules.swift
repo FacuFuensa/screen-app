@@ -1,7 +1,7 @@
 import Foundation
 
 public enum RequestStatus: String, Codable, Sendable {
-    case pending, granted, denied, superseded, expired
+    case pending, granted, denied, superseded, expired, cancelled
 }
 
 public enum RequestRules {

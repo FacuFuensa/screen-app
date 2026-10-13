@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        if Demo.isOn { return true }
         NotificationCategories.register()
         BackgroundRefresh.register()
         BackgroundRefresh.schedule()
@@ -16,11 +17,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        guard !Demo.isOn else { return }
         PushToken.current = deviceToken.map { String(format: "%02x", $0) }.joined()
         Task { await SyncService.shared.run() }
     }
 
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
+        guard !Demo.isOn else { return .noData }
         await SyncService.shared.run()
         return .newData
     }

@@ -15,6 +15,13 @@ final class AppState: ObservableObject {
     var isPaired: Bool { pair?.userB != nil }
 
     func refresh() async {
+        if Demo.isOn {
+            me = Demo.me
+            partner = Demo.partner
+            pair = Demo.pair
+            phase = Demo.phase
+            return
+        }
         guard let myID = await backend.currentUserID() else { phase = .signedOut; return }
         guard AuthorizationCenter.shared.authorizationStatus == .approved else { phase = .needsScreenTime; return }
         do {

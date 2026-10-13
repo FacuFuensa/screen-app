@@ -8,18 +8,42 @@ struct ScreenTimeGateView: View {
     @State private var error: String?
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "hourglass").font(.system(size: 56))
-            Text("Screen necesita dos permisos").font(.title2.bold())
-            Text("Tiempo en pantalla, para poder bloquear tus apps, y notificaciones, para que te lleguen los pedidos de tu pareja.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            if let error { Text(error).foregroundStyle(.red).multilineTextAlignment(.center) }
-            Button("Dar permisos") { Task { await request() } }.buttonStyle(.borderedProminent)
+        ScrollView {
+            VStack(spacing: 20) {
+                HeroHeader(symbol: "checkmark.shield", title: "Dos permisos y listo", subtitle: nil)
+                permissionRow(symbol: "hourglass", color: Theme.coral, title: "Tiempo en pantalla",
+                              message: "Para bloquear las apps que elijas, solo en este celular.")
+                permissionRow(symbol: "bell.badge.fill", color: Theme.amber, title: "Notificaciones",
+                              message: "Para enterarte cuando tu dupla te pida minutos o te los dé.")
+                if let error { Text(error).foregroundStyle(.red).multilineTextAlignment(.center) }
+                Button("Dar permisos") { Task { await request() } }.buttonStyle(PrimaryButtonStyle())
+                Text("Screen nunca ve qué hacés en tus apps.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(24)
         }
-        .padding(24)
+        .background(Theme.background)
+    }
+
+    private func permissionRow(symbol: String, color: Color, title: String, message: String) -> some View {
+        Card {
+            HStack(spacing: 14) {
+                Image(systemName: symbol)
+                    .font(.title2.bold())
+                    .foregroundStyle(color)
+                    .frame(width: 48, height: 48)
+                    .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.headline)
+                    Text(message).font(.subheadline).foregroundStyle(Theme.secondaryText)
+                }
+            }
+        }
     }
 
     private func request() async {
+        guard !Demo.isOn else { return }
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
             if try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {

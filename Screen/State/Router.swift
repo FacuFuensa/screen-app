@@ -18,4 +18,6 @@ final class Router: ObservableObject {
 
     @Published var tab: Tab = .groups
     @Published var sheet: Sheet?
+    @Published var incomingCount = 0
+    @Published var demoEditor: LimitGroup?
 }

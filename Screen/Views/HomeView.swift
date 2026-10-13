@@ -9,33 +9,50 @@ struct HomeView: View {
     var body: some View {
         TabView(selection: $router.tab) {
             GroupsView()
-                .tabItem { Label("Límites", systemImage: "hourglass") }.tag(Router.Tab.groups)
+                .tabItem { Label("Límites", systemImage: "hourglass") }
+                .tag(Router.Tab.groups)
             RequestsView()
-                .tabItem { Label("Pedidos", systemImage: "hand.raised") }.tag(Router.Tab.requests)
+                .tabItem { Label("Pedidos", systemImage: "hand.raised.fill") }
+                .badge(router.incomingCount)
+                .tag(Router.Tab.requests)
             FeedView()
-                .tabItem { Label("Actividad", systemImage: "list.bullet") }.tag(Router.Tab.feed)
+                .tabItem { Label("Actividad", systemImage: "sparkles") }
+                .tag(Router.Tab.feed)
         }
-        .navigationTitle(app.partner.map { "Con \($0.displayName)" } ?? "Screen")
+        .navigationTitle(app.partner.map { "Vos y \($0.displayName)" } ?? "Screen")
         .toolbar {
             Menu {
                 Button("Pedir tiempo") { router.sheet = .ask(nil) }
-                Button("Desemparejar", role: .destructive) { confirmLeave = true }
-                Button("Cerrar sesión") { Task { await app.backend.signOut(); await app.refresh() } }
+                Button("Salir de la dupla", role: .destructive) { confirmLeave = true }
+                Button("Cerrar sesión") {
+                    Task {
+                        guard !Demo.isOn else { return }
+                        await app.backend.signOut()
+                        await app.refresh()
+                    }
+                }
             } label: { Image(systemName: "ellipsis.circle") }
         }
-        .confirmationDialog("¿Desemparejarte? Tus límites siguen en este celular.", isPresented: $confirmLeave) {
-            Button("Desemparejar", role: .destructive) {
-                Task { try? await app.backend.leavePair(); await app.refresh() }
+        .confirmationDialog("¿Salir de la dupla con \(partnerName)? Tus límites siguen en este celular.", isPresented: $confirmLeave) {
+            Button("Salir de la dupla", role: .destructive) {
+                Task {
+                    guard !Demo.isOn else { return }
+                    try? await app.backend.leavePair()
+                    await app.refresh()
+                }
             }
         }
         .task { model.reload(); await model.loadRemote(partnerID: app.partner?.id) }
         .sheet(item: $router.sheet) { sheet in
             NavigationStack {
                 switch sheet {
-                case .ask(let gid): AskTimeView(preselected: gid)
-                case .answer(let rid): AnswerOtherView(requestID: rid)
+                case .ask(let groupID): AskTimeView(preselected: groupID)
+                case .answer(let requestID): AnswerOtherView(requestID: requestID)
                 }
             }
         }
+        .sheet(item: $router.demoEditor) { group in NavigationStack { GroupEditorView(group: group) } }
     }
+
+    private var partnerName: String { app.partner?.displayName ?? "tu dupla" }
 }

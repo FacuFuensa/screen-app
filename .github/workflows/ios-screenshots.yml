@@ -1,0 +1,57 @@
+name: iOS screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "ui-*"]
+    paths:
+      - "Screen/**"
+      - "Shared/**"
+      - "project.yml"
+      - ".github/workflows/ios-screenshots.yml"
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build for simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project Screen.xcodeproj -scheme Screen -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee xcodebuild.log | tail -n 80
+      - name: Show compile errors
+        if: failure()
+        run: grep -E ' error:' xcodebuild.log | head -n 60 || true
+      - name: Boot simulator and capture screens
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available | grep -E 'iPhone .+ \([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}' | sed -n '1p')
+          test -n "$UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/Screen.app
+          mkdir -p shots
+          for shot in auth gate pairing groups editor ask requests feed; do
+            xcrun simctl launch "$UDID" com.facufuensa.screen -ScreenDemo -ScreenShot "$shot"
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "shots/$shot.png"
+            xcrun simctl terminate "$UDID" com.facufuensa.screen || true
+          done
+          xcrun simctl ui "$UDID" appearance dark
+          for shot in groups requests; do
+            xcrun simctl launch "$UDID" com.facufuensa.screen -ScreenDemo -ScreenShot "$shot"
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "shots/dark-$shot.png"
+            xcrun simctl terminate "$UDID" com.facufuensa.screen || true
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/
+          if-no-files-found: error

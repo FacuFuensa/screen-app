@@ -13,16 +13,30 @@ final class GroupsModel: ObservableObject {
     let backend = Backend.shared
 
     func reload() {
+        if Demo.isOn {
+            groups = Demo.myGroups
+            pendingGroupIDs = [Demo.myGroups[1].id]
+            return
+        }
         groups = enforcer.groups
         pendingGroupIDs = Set(PendingEdits().all().values.map(\.group.id))
     }
 
     func loadRemote(partnerID: UUID?) async {
+        if Demo.isOn {
+            partnerGroups = Demo.partnerGroups
+            return
+        }
         guard let partnerID, let rows = try? await backend.remoteGroups() else { return }
         partnerGroups = rows.filter { $0.owner == partnerID }
     }
 
     func save(_ edited: LimitGroup, paired: Bool) async throws -> Outcome {
+        if Demo.isOn {
+            if let index = groups.firstIndex(where: { $0.id == edited.id }) { groups[index] = edited } else { groups.append(edited) }
+            pendingGroupIDs.remove(edited.id)
+            return .applied
+        }
         let old = groups.first { $0.id == edited.id }
         let verdict = old.map { LimitChange.classify(from: $0.config, to: edited.config) } ?? .tightening
         let removesApps = old.map { LimitChange.removesApps(from: $0.config, to: edited.config) } ?? false
@@ -46,6 +60,11 @@ final class GroupsModel: ObservableObject {
     }
 
     func delete(_ group: LimitGroup, paired: Bool) async throws -> Outcome {
+        if Demo.isOn {
+            groups.removeAll { $0.id == group.id }
+            pendingGroupIDs.remove(group.id)
+            return .applied
+        }
         if paired {
             let id = try await backend.requestLoosen(groupID: group.id, payload: LoosenPayload(group, delete: true), message: nil)
             PendingEdits().set(PendingEdit(group: group, delete: true), requestID: id)

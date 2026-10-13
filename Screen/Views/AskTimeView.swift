@@ -10,43 +10,61 @@ struct AskTimeView: View {
     @State private var message = ""
     @State private var sending = false
     @State private var error: String?
+    @State private var hapticTrigger = 0
 
     init(preselected: UUID?) { _groupID = State(initialValue: preselected) }
 
     var body: some View {
-        Form {
-            Picker("Grupo", selection: $groupID) {
-                Text("Elegí uno").tag(UUID?.none)
-                ForEach(model.groups) { Text($0.name).tag(Optional($0.id)) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                HeroHeader(symbol: "hand.raised.fill", title: "¿Cuánto necesitás?",
+                           subtitle: "Le avisamos a \(partnerName) al toque.")
+                Text("Elegí el grupo").font(.headline)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        ForEach(model.groups) { group in
+                            Chip(title: group.name, isSelected: groupID == group.id) { groupID = group.id }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                Text("Minutos").font(.headline)
+                HStack(spacing: 10) {
+                    ForEach(UsageRules.extraTimeOptions, id: \.self) { option in
+                        Chip(title: "\(option) min", isSelected: minutes == option) { minutes = option }
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                Card {
+                    TextField("¿Para qué? (opcional)", text: $message, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                        .onChange(of: message) { _, value in if value.count > 140 { message = String(value.prefix(140)) } }
+                }
+                if let error { Text(error).foregroundStyle(.red) }
+                Button("Pedirle a \(partnerName)") { Task { await send() } }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(groupID == nil || sending)
             }
-            Picker("Minutos", selection: $minutes) {
-                ForEach(UsageRules.extraTimeOptions, id: \.self) { Text("\($0) min").tag($0) }
-            }
-            .pickerStyle(.segmented)
-            TextField("Mensaje (opcional)", text: $message, axis: .vertical)
-                .onChange(of: message) { _, v in if v.count > 140 { message = String(v.prefix(140)) } }
-            if let error { Text(error).foregroundStyle(.red) }
+            .padding(24)
         }
-        .navigationTitle("Pedir tiempo")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Pedir") { Task { await send() } }.disabled(groupID == nil || sending)
-            }
-        }
+        .background(Theme.background)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } } }
         .onAppear { model.reload() }
+        .sensoryFeedback(.success, trigger: hapticTrigger)
     }
+
+    private var partnerName: String { app.partner?.displayName ?? "tu dupla" }
 
     private func send() async {
         guard let groupID else { return }
+        if Demo.isOn { hapticTrigger += 1; dismiss(); return }
         sending = true; defer { sending = false }
         do {
             let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
             let id = try await app.backend.requestExtra(groupID: groupID, minutes: minutes, message: text.isEmpty ? nil : text)
             await app.backend.notify(requestID: id)
+            hapticTrigger += 1
             dismiss()
-        } catch {
-            self.error = error.localizedDescription
-        }
+        } catch { self.error = error.localizedDescription }
     }
 }

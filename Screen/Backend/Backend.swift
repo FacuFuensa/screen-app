@@ -7,7 +7,7 @@ enum BackendError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured: return "Falta configurar el servidor."
-        case .looseningRequiresApproval: return "Este cambio necesita la aprobación de tu pareja."
+        case .looseningRequiresApproval: return "Este cambio necesita la aprobación de tu dupla."
         case .server(let m): return Self.spanish[m] ?? m
         }
     }
@@ -15,11 +15,11 @@ enum BackendError: LocalizedError {
     static let spanish = [
         "invalid_code": "Ese código no existe o ya se usó.",
         "own_code": "Ese es tu propio código.",
-        "already_paired": "Ya estás emparejado.",
+        "already_paired": "Ya tenés una dupla en Screen.",
         "request_expired": "El pedido ya venció.",
         "not_pending": "Ese pedido ya tiene respuesta.",
         "too_many_groups": "Podés tener hasta 5 grupos.",
-        "not_paired": "Todavía no tenés pareja en Screen.",
+        "not_paired": "Todavía no tenés dupla en Screen.",
     ]
 }
 

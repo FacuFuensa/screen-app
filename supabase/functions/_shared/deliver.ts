@@ -15,7 +15,7 @@ async function pairOf(admin: SupabaseClient, id: string): Promise<Pair> {
 }
 async function nameOf(admin: SupabaseClient, id: string): Promise<string> {
   const { data } = await admin.from("profiles").select("display_name").eq("id", id).single();
-  return (data as { display_name: string } | null)?.display_name ?? "Tu pareja";
+  return (data as { display_name: string } | null)?.display_name ?? "Tu dupla";
 }
 async function groupOf(admin: SupabaseClient, id: string | null): Promise<GroupRow | null> {
   if (!id) return null;

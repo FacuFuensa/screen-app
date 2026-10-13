@@ -24,11 +24,14 @@ enum Demo {
     static let partner = ProfileRow(id: partnerID, displayName: "Ana", lastSeenAt: .now, authStatus: "approved")
     static let pair = PairRow(id: pairID, userA: meID, userB: partnerID, inviteCode: "482913")
 
+    /// Shots that show the app before inviting anyone.
+    static var unpairedShot: Bool { ["dupla-sin-pareja"].contains(shot ?? "") }
+    static var pairForShot: PairRow? { unpairedShot ? nil : pair }
+
     static var phase: AppState.Phase {
         switch shot {
         case "auth": return .signedOut
         case "gate": return .needsScreenTime
-        case "pairing": return .unpaired
         default: return .ready
         }
     }
@@ -37,6 +40,16 @@ enum Demo {
         LimitGroup(id: redesID, name: "Redes", selection: FamilyActivitySelection(), dailyMinutes: 45, window: nil),
         LimitGroup(id: juegosID, name: "Juegos", selection: FamilyActivitySelection(), dailyMinutes: nil,
                    window: BlockWindow(startMinute: 23 * 60, endMinute: 7 * 60)),
+    ]
+
+    /// Juegos waits for Ana to approve ending the block half an hour later.
+    static let pendingLoosen: [UUID: PendingLoosen] = [
+        juegosID: PendingLoosen(
+            requestID: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1")!,
+            edit: PendingEdit(group: LimitGroup(id: juegosID, name: "Juegos", selection: FamilyActivitySelection(),
+                                                dailyMinutes: nil,
+                                                window: BlockWindow(startMinute: 23 * 60 + 30, endMinute: 7 * 60)),
+                              delete: false)),
     ]
 
     static let partnerGroups = [

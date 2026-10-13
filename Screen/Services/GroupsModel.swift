@@ -1,12 +1,19 @@
 import Foundation
 import ScreenCore
 
+/// A loosening of one of my limits that is waiting for the partner.
+struct PendingLoosen: Equatable {
+    let requestID: UUID
+    let edit: PendingEdit
+}
+
 @MainActor
 final class GroupsModel: ObservableObject {
     enum Outcome { case applied, sentForApproval }
 
     @Published private(set) var groups: [LimitGroup] = []
-    @Published private(set) var pendingGroupIDs: Set<UUID> = []
+    @Published private(set) var pendingByGroup: [UUID: PendingLoosen] = [:]
+    var pendingGroupIDs: Set<UUID> { Set(pendingByGroup.keys) }
     @Published private(set) var partnerGroups: [GroupRow] = []
 
     let enforcer = Enforcer()
@@ -15,11 +22,16 @@ final class GroupsModel: ObservableObject {
     func reload() {
         if Demo.isOn {
             groups = Demo.myGroups
-            pendingGroupIDs = [Demo.myGroups[1].id]
+            pendingByGroup = Demo.pendingLoosen
             return
         }
         groups = enforcer.groups
-        pendingGroupIDs = Set(PendingEdits().all().values.map(\.group.id))
+        var pending: [UUID: PendingLoosen] = [:]
+        for (key, edit) in PendingEdits().all() {
+            guard let requestID = UUID(uuidString: key) else { continue }
+            pending[edit.group.id] = PendingLoosen(requestID: requestID, edit: edit)
+        }
+        pendingByGroup = pending
     }
 
     func loadRemote(partnerID: UUID?) async {
@@ -34,7 +46,7 @@ final class GroupsModel: ObservableObject {
     func save(_ edited: LimitGroup, paired: Bool) async throws -> Outcome {
         if Demo.isOn {
             if let index = groups.firstIndex(where: { $0.id == edited.id }) { groups[index] = edited } else { groups.append(edited) }
-            pendingGroupIDs.remove(edited.id)
+            pendingByGroup[edited.id] = nil
             return .applied
         }
         let old = groups.first { $0.id == edited.id }
@@ -62,7 +74,7 @@ final class GroupsModel: ObservableObject {
     func delete(_ group: LimitGroup, paired: Bool) async throws -> Outcome {
         if Demo.isOn {
             groups.removeAll { $0.id == group.id }
-            pendingGroupIDs.remove(group.id)
+            pendingByGroup[group.id] = nil
             return .applied
         }
         if paired {
@@ -86,5 +98,13 @@ final class GroupsModel: ObservableObject {
                 || !group.selection.categoryTokens.isDisjoint(with: draft.selection.categoryTokens)
                 || !group.selection.webDomainTokens.isDisjoint(with: draft.selection.webDomainTokens)
         }
+    }
+
+    /// Takes back a pending loosening; the limit simply stays as it is.
+    func cancelPending(groupID: UUID) async throws {
+        guard let pending = pendingByGroup[groupID] else { return }
+        if !Demo.isOn { try await backend.cancelRequest(pending.requestID) }
+        _ = PendingEdits().take(requestID: pending.requestID)
+        if Demo.isOn { pendingByGroup[groupID] = nil } else { reload() }
     }
 }

@@ -153,6 +153,10 @@ final class Backend {
         try await call { try await c().rpc("mark_applied", params: ["p_request_id": id]).execute() }
     }
 
+    func cancelRequest(_ id: UUID) async throws {
+        try await call { try await c().rpc("cancel_request", params: ["p_request_id": id]).execute() }
+    }
+
     func logEvent(_ item: OutboxItem) async throws -> UUID? {
         struct P: Encodable { let p_kind: String; let p_group_id: UUID?; let p_client_id: String }
         return try await call {

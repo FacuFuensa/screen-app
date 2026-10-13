@@ -10,7 +10,7 @@ struct RootView: View {
             case .signedOut: AuthView()
             case .needsScreenTime: ScreenTimeGateView()
             case .unpaired: PairingView()
-            case .ready: Text("Listo")
+            case .ready: HomeView()
             }
         }
         .task { await app.refresh() }

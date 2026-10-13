@@ -33,6 +33,21 @@ struct HomeView: View {
             }
         }
         .task { await refreshAll() }
+        .onReceive(NotificationCenter.default.publisher(for: .screenDataChanged)) { _ in
+            Task { await refreshAll() }
+        }
+        .onChange(of: router.tab) { _, _ in Task { await refreshAll() } }
+        .task(id: waiting) {
+            // While I wait for an answer, check every 10 s so the result shows up
+            // even if the push is late or the app was opened from the home screen.
+            guard waiting, !Demo.isOn else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                if Task.isCancelled { break }
+                await SyncService.shared.run()
+                await refreshAll()
+            }
+        }
         .sheet(item: $router.sheet) { sheet in
             NavigationStack {
                 switch sheet {
@@ -47,6 +62,7 @@ struct HomeView: View {
     }
 
     private var partnerTitle: String { app.partner?.displayName ?? "Tu dupla" }
+    private var waiting: Bool { activity.hasOwnPending(me: app.me?.id) || !model.pendingByGroup.isEmpty }
 
     private var menu: some View {
         Menu {

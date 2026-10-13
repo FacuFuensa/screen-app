@@ -35,7 +35,7 @@ enum NotificationRouter {
         case "DENY": await answer(rid, grant: false)
         case "GRANT_OTHER": Router.shared.sheet = .answer(rid)
         default:
-            if type == "request" { Router.shared.tab = .requests } else { await SyncService.shared.run() }
+            if type == "request" { Router.shared.tab = .partner } else { await SyncService.shared.run() }
         }
     }
 
@@ -50,5 +50,6 @@ enum NotificationRouter {
             c.body = error.localizedDescription
             try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
         }
+        NotificationCenter.default.post(name: .screenDataChanged, object: nil)
     }
 }

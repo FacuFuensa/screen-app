@@ -25,12 +25,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
         guard !Demo.isOn else { return .noData }
         await SyncService.shared.run()
+        await MainActor.run { NotificationCenter.default.post(name: .screenDataChanged, object: nil) }
         return .newData
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .sound, .list]
+        // The app is open: refresh what is on screen, not just show a banner.
+        await MainActor.run { NotificationCenter.default.post(name: .screenDataChanged, object: nil) }
+        return [.banner, .sound, .list]
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {

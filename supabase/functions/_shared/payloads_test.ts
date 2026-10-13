@@ -53,3 +53,7 @@ Deno.test("only some events push", () => {
     "Ana desactivó los permisos de Screen",
   );
 });
+
+Deno.test("cancelled requests send nothing", () => {
+  assertEquals(answeredRequestPayload({ ...base, status: "cancelled" }, "Redes", "Beto"), null);
+});

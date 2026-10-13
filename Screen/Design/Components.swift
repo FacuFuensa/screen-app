@@ -48,13 +48,14 @@ struct Card<Content: View>: View {
 /// A full-width coral call-to-action button style.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    var color: Color = Theme.coral
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 52)
-            .background(Theme.coral, in: Capsule())
+            .background(color, in: Capsule())
             .opacity(isEnabled ? 1 : 0.4)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)

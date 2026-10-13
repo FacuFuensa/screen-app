@@ -1,10 +1,17 @@
 import Foundation
 
+/// Opens the editor with a prepared draft; only used by demo screenshots.
+struct DemoEditorRequest: Identifiable {
+    let original: LimitGroup?
+    let draft: LimitGroup
+    var id: UUID { draft.id }
+}
+
 @MainActor
 final class Router: ObservableObject {
     static let shared = Router()
 
-    enum Tab: Hashable { case groups, requests, feed }
+    enum Tab: Hashable { case me, partner }
     enum Sheet: Identifiable {
         case ask(UUID?)
         case answer(UUID)
@@ -16,8 +23,7 @@ final class Router: ObservableObject {
         }
     }
 
-    @Published var tab: Tab = .groups
+    @Published var tab: Tab = .me
     @Published var sheet: Sheet?
-    @Published var incomingCount = 0
-    @Published var demoEditor: LimitGroup?
+    @Published var demoEditor: DemoEditorRequest?
 }

@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
-    enum Phase: Equatable { case loading, signedOut, needsScreenTime, unpaired, ready }
+    enum Phase: Equatable { case loading, signedOut, needsScreenTime, ready }
 
     @Published var phase: Phase = .loading
     @Published var me: ProfileRow?
@@ -17,8 +17,8 @@ final class AppState: ObservableObject {
     func refresh() async {
         if Demo.isOn {
             me = Demo.me
-            partner = Demo.partner
-            pair = Demo.pair
+            pair = Demo.pairForShot
+            partner = Demo.pairForShot == nil ? nil : Demo.partner
             phase = Demo.phase
             return
         }
@@ -30,10 +30,10 @@ final class AppState: ObservableObject {
             self.pair = pair
             me = profiles.first { $0.id == myID }
             partner = profiles.first { $0.id != myID }
-            phase = pair?.userB != nil ? .ready : .unpaired
+            phase = .ready
         } catch {
             // Offline: keep whatever we showed last; limits still work locally.
-            if phase == .loading { phase = .unpaired }
+            if phase == .loading { phase = .ready }
         }
     }
 }

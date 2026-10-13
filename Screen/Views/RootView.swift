@@ -1,3 +1,4 @@
+import ScreenCore
 import SwiftUI
 
 struct RootView: View {
@@ -5,15 +6,15 @@ struct RootView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var router: Router
     @EnvironmentObject var model: GroupsModel
+    @EnvironmentObject var activity: ActivityModel
     @State private var routedDemo = false
 
     var body: some View {
-        NavigationStack {
+        Group {
             switch app.phase {
             case .loading: ProgressView()
-            case .signedOut: AuthView()
-            case .needsScreenTime: ScreenTimeGateView()
-            case .unpaired: PairingView()
+            case .signedOut: NavigationStack { AuthView() }
+            case .needsScreenTime: NavigationStack { ScreenTimeGateView() }
             case .ready: HomeView()
             }
         }
@@ -28,24 +29,20 @@ struct RootView: View {
         await app.refresh()
         if Demo.isOn {
             model.reload()
+            await activity.load()
             await model.loadRemote(partnerID: app.partner?.id)
-            router.incomingCount = Demo.requests.filter {
-                $0.fromUser == app.partner?.id && $0.effectiveStatus() == .pending
-            }.count
             routeDemoIfNeeded()
             return
         }
         await SyncService.shared.run()
         model.reload()
-        if app.phase == .ready, let rows = try? await app.backend.requests() {
-            router.incomingCount = rows.filter {
-                $0.fromUser == app.partner?.id && $0.effectiveStatus() == .pending
-            }.count
-        }
+        if app.phase == .ready { await activity.load() }
         let store = SharedStore()
         if let ask = store.load(PendingAsk.self, key: SharedKey.pendingAsk) {
             store.remove(SharedKey.pendingAsk)
-            if Date().timeIntervalSince(ask.createdAt) < 600, app.phase == .ready { router.sheet = .ask(ask.groupID) }
+            if Date().timeIntervalSince(ask.createdAt) < 600, app.phase == .ready, app.isPaired {
+                router.sheet = .ask(ask.groupID)
+            }
         }
     }
 
@@ -53,11 +50,9 @@ struct RootView: View {
         guard !routedDemo else { return }
         routedDemo = true
         switch Demo.shot {
-        case "requests": router.tab = .requests
-        case "feed": router.tab = .feed
+        case "dupla", "dupla-sin-pareja": router.tab = .partner
         case "ask": router.sheet = .ask(nil)
-        case "editor": router.demoEditor = Demo.myGroups.first
-        default: router.tab = .groups
+        default: router.tab = .me
         }
     }
 }

@@ -5,6 +5,7 @@ struct AskTimeView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var app: AppState
     @EnvironmentObject var model: GroupsModel
+    @EnvironmentObject var activity: ActivityModel
     @State private var groupID: UUID?
     @State private var minutes = 15
     @State private var message = ""
@@ -57,12 +58,13 @@ struct AskTimeView: View {
 
     private func send() async {
         guard let groupID else { return }
-        if Demo.isOn { hapticTrigger += 1; dismiss(); return }
+        if Demo.isOn { hapticTrigger += 1; await activity.load(); dismiss(); return }
         sending = true; defer { sending = false }
         do {
             let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
             let id = try await app.backend.requestExtra(groupID: groupID, minutes: minutes, message: text.isEmpty ? nil : text)
             await app.backend.notify(requestID: id)
+            await activity.load()
             hapticTrigger += 1
             dismiss()
         } catch { self.error = error.localizedDescription }

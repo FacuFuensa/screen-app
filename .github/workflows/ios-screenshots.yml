@@ -37,7 +37,7 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/Screen.app
           mkdir -p shots
-          for shot in auth gate pairing groups editor ask requests feed; do
+          for shot in auth gate yo dupla dupla-sin-pareja ask; do
             xcrun simctl launch "$UDID" com.facufuensa.screen -ScreenDemo -ScreenShot "$shot"
             sleep 6
             xcrun simctl io "$UDID" screenshot "shots/$shot.png"
@@ -46,7 +46,7 @@ jobs:
           xcrun simctl ui "$UDID" appearance dark
           # The first launch after an appearance change can still be drawing; give it time.
           sleep 5
-          for shot in groups requests; do
+          for shot in yo dupla; do
             xcrun simctl launch "$UDID" com.facufuensa.screen -ScreenDemo -ScreenShot "$shot"
             sleep 10
             xcrun simctl io "$UDID" screenshot "shots/dark-$shot.png"

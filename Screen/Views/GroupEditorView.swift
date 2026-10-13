@@ -16,9 +16,9 @@ struct GroupEditorView: View {
     private let isNew: Bool
     private let quarterHours = Array(stride(from: 0, to: 1440, by: 15))
 
-    init(group: LimitGroup?) {
+    init(group: LimitGroup?, startingDraft: LimitGroup? = nil) {
         isNew = group == nil
-        let initial = group ?? LimitGroup(id: UUID(), name: "", selection: FamilyActivitySelection(), dailyMinutes: 30, window: nil)
+        let initial = startingDraft ?? group ?? LimitGroup(id: UUID(), name: "", selection: FamilyActivitySelection(), dailyMinutes: 30, window: nil)
         _draft = State(initialValue: initial)
         _hasDaily = State(initialValue: initial.dailyMinutes != nil)
         _hasWindow = State(initialValue: initial.window != nil)

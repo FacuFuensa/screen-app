@@ -6,10 +6,15 @@ struct ScreenApp: App {
     @StateObject private var app = AppState()
     @StateObject private var router = Router.shared
     @StateObject private var groups = GroupsModel()
+    @StateObject private var activity = ActivityModel()
 
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(app).environmentObject(router).environmentObject(groups)
+            RootView()
+                .environmentObject(app)
+                .environmentObject(router)
+                .environmentObject(groups)
+                .environmentObject(activity)
         }
     }
 }

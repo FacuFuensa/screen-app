@@ -3,7 +3,7 @@ import SwiftUI
 struct AnswerOtherView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var app: AppState
-    @EnvironmentObject var router: Router
+    @EnvironmentObject var activity: ActivityModel
     let requestID: UUID
     @State private var minutes = 10
     @State private var error: String?
@@ -19,6 +19,7 @@ struct AnswerOtherView: View {
             Stepper("Elegir minutos", value: $minutes, in: 1...120).labelsHidden().controlSize(.large)
             if let error { Text(error).foregroundStyle(.red) }
             Button("Dar \(minutes) min") { Task { await give() } }.buttonStyle(PrimaryButtonStyle())
+                .disabled(activity.busy.contains(requestID))
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -28,14 +29,11 @@ struct AnswerOtherView: View {
     }
 
     private func give() async {
-        do {
-            if !Demo.isOn {
-                try await app.backend.answer(requestID: requestID, grant: true, minutes: minutes)
-                await app.backend.notify(requestID: requestID)
-            }
-            router.incomingCount = max(0, router.incomingCount - 1)
+        if await activity.answer(requestID, grant: true, minutes: minutes) {
             hapticTrigger += 1
             dismiss()
-        } catch { self.error = error.localizedDescription }
+        } else {
+            error = activity.error
+        }
     }
 }

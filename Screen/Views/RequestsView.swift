@@ -110,10 +110,9 @@ struct RequestsView: View {
     }
 
     private func title(_ request: RequestRow) -> String {
-        switch request.kind {
-        case .extraTime: return "\(who(request)) pidió \(request.minutes ?? 0) min en \(groupName(request.groupID))"
-        case .loosenLimit: return "\(who(request)) quiere aflojar \(groupName(request.groupID))"
-        }
+        FeedWording.requestTitle(extraMinutes: request.kind == .extraTime ? (request.minutes ?? 0) : nil,
+                                 group: groupName(request.groupID), actor: who(request),
+                                 isMe: request.fromUser == app.me?.id)
     }
 
     private func diff(_ request: RequestRow, _ payload: PayloadRow) -> String {

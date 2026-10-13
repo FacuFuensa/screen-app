@@ -23,9 +23,13 @@ struct FeedView: View {
                                 .background(appearance.color, in: Circle())
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(FeedWording.describe(kind: event.kind, actor: name(event.actor),
-                                                         group: groupName(event.groupID), minutes: event.data.minutes))
+                                                         group: groupName(event.groupID), minutes: event.data.minutes,
+                                                         isMe: event.actor == app.me?.id))
                                     .font(.subheadline.weight(.medium))
-                                Text(event.createdAt, style: .relative).font(.caption).foregroundStyle(Theme.secondaryText)
+                                // "hace 20 minutos", in Spanish whatever the device language is.
+                                Text(event.createdAt.formatted(.relative(presentation: .named)
+                                    .locale(Locale(identifier: "es_AR"))))
+                                    .font(.caption).foregroundStyle(Theme.secondaryText)
                             }
                             Spacer(minLength: 0)
                         }

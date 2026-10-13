@@ -42,6 +42,11 @@ enum Demo {
                    window: BlockWindow(startMinute: 23 * 60, endMinute: 7 * 60)),
     ]
 
+    static func newDraft(name: String) -> LimitGroup {
+        LimitGroup(id: UUID(uuidString: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1")!, name: name,
+                   selection: FamilyActivitySelection(), dailyMinutes: 30, window: nil)
+    }
+
     /// Juegos waits for Ana to approve ending the block half an hour later.
     static let pendingLoosen: [UUID: PendingLoosen] = [
         juegosID: PendingLoosen(

@@ -16,7 +16,7 @@ struct ScreenTimeGateView: View {
                 permissionRow(symbol: "bell.badge.fill", color: Theme.amber, title: "Notificaciones",
                               message: "Para enterarte cuando tu dupla te pida minutos o te los dé.")
                 if let error { Text(error).foregroundStyle(.red).multilineTextAlignment(.center) }
-                Button("Dar permisos") { Task { await request() } }.buttonStyle(PrimaryButtonStyle())
+                Button("Dar permisos") { Task { await request() } }.buttonStyle(PrimaryButtonStyle()).tourAnchor(.permissions)
                 Text("Screen nunca ve qué hacés en tus apps.")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
@@ -24,6 +24,7 @@ struct ScreenTimeGateView: View {
             .padding(24)
         }
         .background(Theme.background)
+        .tourHost()
     }
 
     private func permissionRow(symbol: String, color: Color, title: String, message: String) -> some View {
@@ -46,6 +47,7 @@ struct ScreenTimeGateView: View {
         guard !Demo.isOn else { return }
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            TourController.shared.complete(.permissions)
             if try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
                 UIApplication.shared.registerForRemoteNotifications()
             }

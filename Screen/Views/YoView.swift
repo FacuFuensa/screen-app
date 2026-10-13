@@ -30,18 +30,17 @@ struct YoView: View {
                                 onCancel: { Task { await cancelPending(group.id) } })
                 }
                 if model.groups.count < UsageRules.maxGroups {
-                    Button { creating = true } label: { newLimitTile }
-                        .buttonStyle(.plain)
+                    Button { creating = true; TourController.shared.complete(.newLimit) } label: { newLimitTile }.buttonStyle(.plain).tourAnchor(.newLimit)
                 }
                 if !app.isPaired {
-                    Button { router.tab = .partner } label: { inviteTile }
-                        .buttonStyle(.plain)
+                    Button { router.tab = .partner; TourController.shared.complete(.invite) } label: { inviteTile }.buttonStyle(.plain).tourAnchor(.invite)
                 }
                 if let error = activity.error { Text(error).font(.footnote).foregroundStyle(.red) }
             }
             .padding(16)
         }
         .background(Theme.background)
+        .tourHost()
         .sheet(item: $editing) { group in NavigationStack { GroupEditorView(group: group) } }
         .sheet(isPresented: $creating) { NavigationStack { GroupEditorView(group: nil) } }
         .refreshable { model.reload(); await activity.load() }

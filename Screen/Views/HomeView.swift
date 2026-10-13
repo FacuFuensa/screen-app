@@ -5,6 +5,7 @@ struct HomeView: View {
     @EnvironmentObject var router: Router
     @EnvironmentObject var model: GroupsModel
     @EnvironmentObject var activity: ActivityModel
+    @EnvironmentObject var tour: TourController
     @State private var confirmLeave = false
 
     var body: some View {
@@ -59,6 +60,8 @@ struct HomeView: View {
         .sheet(item: $router.demoEditor) { request in
             NavigationStack { GroupEditorView(group: request.original, startingDraft: request.draft) }
         }
+        .onChange(of: app.isPaired) { _, paired in if paired { tour.pairingCompleted() } }
+        .sheet(isPresented: $tour.showFinal) { TourFinalView() }
     }
 
     private var partnerTitle: String { app.partner?.displayName ?? "Tu dupla" }
@@ -66,6 +69,7 @@ struct HomeView: View {
 
     private var menu: some View {
         Menu {
+            Button("Ver el recorrido de nuevo") { router.tab = .me; tour.restart() }
             if app.isPaired {
                 Button("Salir de la dupla", role: .destructive) { confirmLeave = true }
             }

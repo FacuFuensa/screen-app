@@ -7,6 +7,7 @@ struct ScreenApp: App {
     @StateObject private var router = Router.shared
     @StateObject private var groups = GroupsModel()
     @StateObject private var activity = ActivityModel()
+    @StateObject private var tour = TourController.shared
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +16,7 @@ struct ScreenApp: App {
                 .environmentObject(router)
                 .environmentObject(groups)
                 .environmentObject(activity)
+                .environmentObject(tour)
         }
     }
 }

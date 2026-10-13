@@ -21,7 +21,7 @@ final class GroupsModel: ObservableObject {
 
     func reload() {
         if Demo.isOn {
-            groups = Demo.myGroups
+            groups = Demo.shot == "tour-2" ? [] : Demo.myGroups
             pendingByGroup = Demo.pendingLoosen
             return
         }

@@ -68,6 +68,13 @@ struct GroupEditorView: View {
             Button("OK") {}
         } message: { Text(notice ?? "") }
         .sensoryFeedback(.success, trigger: hapticTrigger)
+        .onChange(of: nameFocused) { _, focused in
+            if !focused, !trimmedName.isEmpty { TourController.shared.complete(.name) }
+        }
+        .onChange(of: draft.appCount) { _, count in if count > 0 { TourController.shared.complete(.apps) } }
+        .onChange(of: draft.dailyMinutes) { _, _ in TourController.shared.complete(.minutes) }
+        .onChange(of: hasWindow) { _, _ in TourController.shared.complete(.minutes) }
+        .tourHost()
     }
 
     // MARK: Derived state
@@ -102,9 +109,11 @@ struct GroupEditorView: View {
                     .textFieldStyle(.roundedBorder)
                     .focused($nameFocused)
                     .submitLabel(.done)
+                    .onSubmit { if !trimmedName.isEmpty { TourController.shared.complete(.name) } }
                 Text("Un nombre corto que los dos reconozcan.").font(.footnote).foregroundStyle(Theme.secondaryText)
             }
         }
+        .tourAnchor(.name)
     }
 
     private var appsCard: some View {
@@ -127,6 +136,7 @@ struct GroupEditorView: View {
                 }
             }
         }
+        .tourAnchor(.apps)
     }
 
     private var dailyCard: some View {
@@ -144,6 +154,7 @@ struct GroupEditorView: View {
                 Text("Se reinicia todos los días a la medianoche.").font(.footnote).foregroundStyle(Theme.secondaryText)
             }
         }
+        .tourAnchor(.minutes)
     }
 
     private var windowCard: some View {
@@ -199,6 +210,7 @@ struct GroupEditorView: View {
             }
             .buttonStyle(PrimaryButtonStyle(color: preview?.tone == .needsApproval ? Theme.amber : Theme.coral))
             .disabled(!canSave)
+            .tourAnchor(.save)
         }
         .padding(16)
         .background(.bar)
@@ -214,6 +226,7 @@ struct GroupEditorView: View {
         do {
             _ = try await model.save(draft, paired: app.isPaired)
             hapticTrigger += 1
+            TourController.shared.complete(.save)
             dismiss()  // the card in "Yo" now shows the result, including "Esperando a …"
         } catch {
             notice = error.localizedDescription

@@ -37,7 +37,7 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/Screen.app
           mkdir -p shots
-          for shot in auth gate yo dupla dupla-sin-pareja ask editor-endurecer editor-aflojar editor-pendiente; do
+          for shot in auth gate yo dupla dupla-sin-pareja ask editor-endurecer editor-aflojar editor-pendiente tour-2 tour-3 tour-4 tour-final; do
             xcrun simctl launch "$UDID" com.facufuensa.screen -ScreenDemo -ScreenShot "$shot"
             sleep 6
             xcrun simctl io "$UDID" screenshot "shots/$shot.png"

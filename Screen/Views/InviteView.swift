@@ -19,6 +19,7 @@ struct InviteView: View {
             .padding(24)
         }
         .background(Theme.background)
+        .tourHost()
         .task {
             // Notice when the other person uses the code, without any tapping.
             while !Task.isCancelled && !app.isPaired && !Demo.isOn {
@@ -71,6 +72,7 @@ struct InviteView: View {
                 }
             }
         }
+        .tourAnchor(.share)
     }
 
     private var shownCode: String? { Demo.isOn ? "482913" : (code ?? app.pair?.inviteCode) }

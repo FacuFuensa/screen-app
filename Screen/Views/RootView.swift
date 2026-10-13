@@ -7,6 +7,7 @@ struct RootView: View {
     @EnvironmentObject var router: Router
     @EnvironmentObject var model: GroupsModel
     @EnvironmentObject var activity: ActivityModel
+    @EnvironmentObject var tour: TourController
     @State private var routedDemo = false
 
     var body: some View {
@@ -37,6 +38,9 @@ struct RootView: View {
         await SyncService.shared.run()
         model.reload()
         if app.phase == .ready { await activity.load() }
+        if app.phase == .needsScreenTime || app.phase == .ready {
+            tour.start(authorized: app.phase == .ready, groupCount: model.groups.count, paired: app.isPaired)
+        }
         let store = SharedStore()
         if let ask = store.load(PendingAsk.self, key: SharedKey.pendingAsk) {
             store.remove(SharedKey.pendingAsk)
@@ -60,6 +64,14 @@ struct RootView: View {
             router.demoEditor = DemoEditorRequest(original: Demo.myGroups[0], draft: draft)
         case "editor-pendiente":
             router.demoEditor = DemoEditorRequest(original: Demo.myGroups[1], draft: Demo.myGroups[1])
+        case "tour-2": tour.force(.newLimit)
+        case "tour-3":
+            tour.force(.name)
+            router.demoEditor = DemoEditorRequest(original: nil, draft: Demo.newDraft(name: ""))
+        case "tour-4":
+            tour.force(.apps)
+            router.demoEditor = DemoEditorRequest(original: nil, draft: Demo.newDraft(name: "Redes"))
+        case "tour-final": tour.force(nil, final: true)
         default: router.tab = .me
         }
     }

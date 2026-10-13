@@ -10,9 +10,9 @@ struct HomeView: View {
         TabView(selection: $router.tab) {
             GroupsView()
                 .tabItem { Label("Límites", systemImage: "hourglass") }.tag(Router.Tab.groups)
-            Text("Pedidos")
+            RequestsView()
                 .tabItem { Label("Pedidos", systemImage: "hand.raised") }.tag(Router.Tab.requests)
-            Text("Actividad")
+            FeedView()
                 .tabItem { Label("Actividad", systemImage: "list.bullet") }.tag(Router.Tab.feed)
         }
         .navigationTitle(app.partner.map { "Con \($0.displayName)" } ?? "Screen")
@@ -29,5 +29,13 @@ struct HomeView: View {
             }
         }
         .task { model.reload(); await model.loadRemote(partnerID: app.partner?.id) }
+        .sheet(item: $router.sheet) { sheet in
+            NavigationStack {
+                switch sheet {
+                case .ask(let gid): AskTimeView(preselected: gid)
+                case .answer(let rid): AnswerOtherView(requestID: rid)
+                }
+            }
+        }
     }
 }

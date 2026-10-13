@@ -26,3 +26,8 @@ jobs:
           APP=build/Build/Products/Debug-iphonesimulator/Screen.app
           ls "$APP/PlugIns"
           test "$(ls "$APP/PlugIns" | grep -c '\.appex$')" -eq 3
+          # A privacy manifest only counts if it is inside every bundle; a miss is invisible until upload.
+          for b in "$APP" "$APP"/PlugIns/*.appex; do
+            test -f "$b/PrivacyInfo.xcprivacy" || { echo "::error::PrivacyInfo.xcprivacy missing in $b"; exit 1; }
+          done
+          echo "Privacy manifest packaged in app and extensions."

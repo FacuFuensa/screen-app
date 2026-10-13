@@ -4,7 +4,7 @@ export interface Proposed {
   window_start?: number | null; window_end?: number | null; delete?: boolean;
 }
 export interface RequestRow {
-  id: string; kind: Kind; status: "pending" | "granted" | "denied" | "superseded";
+  id: string; kind: Kind; status: "pending" | "granted" | "denied" | "superseded" | "cancelled";
   minutes: number | null; granted_minutes: number | null; message: string | null;
   payload: Proposed | null; from_user: string; group_id: string | null;
 }
@@ -65,7 +65,7 @@ export function pendingRequestPayload(r: RequestRow, group: GroupRow | null, fro
 }
 
 export function answeredRequestPayload(r: RequestRow, groupName: string | null, partnerName: string): ApnsPayload | null {
-  if (r.status === "pending" || r.status === "superseded") return null;
+  if (r.status === "pending" || r.status === "superseded" || r.status === "cancelled") return null;
   const g = groupName ?? "tu grupo";
   if (r.status === "denied") {
     const body = r.kind === "extra_time" ? `Sin minutos extra en ${g}` : `Sigue el límite actual de ${g}`;

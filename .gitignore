@@ -1,0 +1,9 @@
+*.xcodeproj
+build/
+private/
+.DS_Store
+.build/
+supabase/.temp/
+supabase/.branches/
+ota/
+.vercel/

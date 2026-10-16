@@ -12,6 +12,7 @@ struct AskTimeView: View {
     @State private var sending = false
     @State private var error: String?
     @State private var hapticTrigger = 0
+    @State private var canUseWildcard = false
 
     init(preselected: UUID?) { _groupID = State(initialValue: preselected) }
 
@@ -45,16 +46,41 @@ struct AskTimeView: View {
                 Button("Pedirle a \(partnerName)") { Task { await send() } }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(groupID == nil || sending)
+                if canUseWildcard {
+                    Button("Usar mi comodín (\(UsageRules.wildcardMinutes) min, sin pedir)") { Task { await useWildcard() } }
+                        .buttonStyle(SecondaryButtonStyle())
+                        .disabled(groupID == nil || sending)
+                }
             }
             .padding(24)
         }
         .background(Theme.background)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } } }
-        .onAppear { model.reload() }
+        .onAppear {
+            model.reload()
+            canUseWildcard = Demo.isOn || model.enforcer.ledger(now: .now).canUseWildcard
+        }
         .sensoryFeedback(.success, trigger: hapticTrigger)
     }
 
     private var partnerName: String { app.partner?.displayName ?? "tu dupla" }
+
+    /// Once a day, no approval; the partner hears about it through the outbox.
+    private func useWildcard() async {
+        guard let groupID else { return }
+        if Demo.isOn { hapticTrigger += 1; dismiss(); return }
+        do {
+            guard try model.enforcer.useWildcard(groupID: groupID) else {
+                canUseWildcard = false
+                error = "Ya usaste tu comodín de hoy."
+                return
+            }
+            hapticTrigger += 1
+            await SyncService.shared.run()
+            await activity.load()
+            dismiss()
+        } catch { self.error = error.localizedDescription }
+    }
 
     private func send() async {
         guard let groupID else { return }

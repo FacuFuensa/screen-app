@@ -12,7 +12,10 @@ Family Controls no funciona en el simulador: todo esto es en dispositivo.
 - [ ] A llega a 5 min → aparece la pantalla de bloqueo "Se terminó tu tiempo de hoy en Redes". B recibe push "A llegó al límite".
 
 ## Pedido de tiempo
-- [ ] En el bloqueo, A toca "Pedir tiempo" → notificación → abre la app con Redes elegido.
+- [ ] El bloqueo de Instagram dice "Instagram", el grupo y el nombre de B. "Cerrar" lo cierra.
+- [ ] En el bloqueo, A toca "Pedirle permiso a B" → notificación → abre la app con Redes elegido.
+- [ ] Con el permiso de Tiempo en pantalla ya dado, abrir la app en frío nunca muestra "Dos permisos y listo".
+- [ ] Abrir y cerrar la app varias veces no le manda a B "desactivó los permisos de Screen".
 - [ ] A pide 5 min con mensaje → B recibe "A pide 5 min" con "Dar 5 min / Otra cantidad / No".
 - [ ] B toca "Dar 5 min" desde la notificación, sin abrir la app → A recibe "Te dieron 5 min" y TikTok se desbloquea.
 - [ ] Después de 5 min de uso real, TikTok se vuelve a bloquear.
@@ -21,7 +24,7 @@ Family Controls no funciona en el simulador: todo esto es en dispositivo.
 - [ ] Un pedido sin respuesta durante 30 min aparece como "Venció sin respuesta"; aprobarlo después muestra "El pedido ya venció".
 
 ## Comodín
-- [ ] En el bloqueo, "Usar comodín (5 min)" desbloquea al instante, incluso en modo avión.
+- [ ] En "Pedir tiempo", "Usar mi comodín (5 min, sin pedir)" desbloquea al instante, incluso en modo avión.
 - [ ] Al volver la red, B ve "A usó su comodín". El botón no vuelve a aparecer hasta mañana.
 
 ## Aflojar y endurecer

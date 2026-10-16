@@ -23,13 +23,16 @@ final class AppState: ObservableObject {
             return
         }
         guard let myID = await backend.currentUserID() else { phase = .signedOut; return }
-        guard AuthorizationCenter.shared.authorizationStatus == .approved else { phase = .needsScreenTime; return }
+        guard await ScreenTimeAuth.settledStatus() == .approved else { phase = .needsScreenTime; return }
         do {
             let pair = try await backend.myPair()
             let profiles = try await backend.profiles()
             self.pair = pair
             me = profiles.first { $0.id == myID }
             partner = profiles.first { $0.id != myID }
+            // The shield extension has no network; it reads the name from here.
+            if let name = partner?.displayName { AppGroup.defaults.set(name, forKey: SharedKey.partnerName) }
+            else { AppGroup.defaults.removeObject(forKey: SharedKey.partnerName) }
             phase = .ready
         } catch {
             // Offline: keep whatever we showed last; limits still work locally.

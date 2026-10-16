@@ -1,3 +1,5 @@
+import Combine
+import FamilyControls
 import ScreenCore
 import SwiftUI
 
@@ -24,6 +26,10 @@ struct RootView: View {
         .background(Theme.background)
         .task { await foreground() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await foreground() } } }
+        // The status can finish loading after the first read; leave the gate as soon as it does.
+        .onReceive(AuthorizationCenter.shared.$authorizationStatus.removeDuplicates().dropFirst()) { _ in
+            Task { await foreground() }
+        }
     }
 
     private func foreground() async {

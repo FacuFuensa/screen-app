@@ -20,17 +20,19 @@ final class ShieldActionExtension: ShieldActionDelegate {
         guard let groupID else { done(.close); return }
         switch action {
         case .primaryButtonPressed:
-            // Shield extensions have no network: hand the request to the app.
+            done(.close)
+        case .secondaryButtonPressed:
+            // Shield extensions can neither open the app nor reach the network: leave the
+            // request for the app and post a notification that opens straight into it.
             SharedStore().save(PendingAsk(groupID: groupID, createdAt: .now), key: SharedKey.pendingAsk)
+            let partner = AppGroup.defaults.string(forKey: SharedKey.partnerName)
             let content = UNMutableNotificationContent()
-            content.title = "Pedir tiempo"
-            content.body = "Tocá acá para elegir cuántos minutos pedir."
+            content.title = partner.map { "Pedile permiso a \($0)" } ?? "Pedir permiso"
+            content.body = "Tocá acá para elegir cuántos minutos necesitás."
+            content.sound = .default
             content.userInfo = ["type": "ask", "group_id": groupID.uuidString]
             let request = UNNotificationRequest(identifier: "ask", content: content, trigger: nil)
             UNUserNotificationCenter.current().add(request) { _ in done(.close) }
-        case .secondaryButtonPressed:
-            let ok = (try? Enforcer().useWildcard(groupID: groupID)) ?? false
-            done(ok ? .defer : .close)
         @unknown default:
             done(.close)
         }

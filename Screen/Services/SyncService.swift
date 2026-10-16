@@ -26,7 +26,7 @@ final class SyncService {
         guard !running, await backend.currentUserID() != nil else { return }
         running = true; defer { running = false }
 
-        let status = AuthorizationCenter.shared.authorizationStatus.wireValue
+        let status = await ScreenTimeAuth.reportedStatus()
         if let eid = try? await backend.heartbeat(authStatus: status, apnsToken: PushToken.current) {
             await backend.notify(eventID: eid)
         }

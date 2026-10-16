@@ -11,4 +11,5 @@ enum SharedKey {
     static let outbox = "outbox"
     static let pendingAsk = "pendingAsk"
     static let pendingEdits = "pendingEdits"
+    static let partnerName = "partnerName"
 }
